@@ -1,13 +1,14 @@
 import { Category} from '../model/Category.model.js'
 
-export const fetchCategory = async (req , res)=>{
+export const fetchCategories = async (req, res) => {
   try {
     const categories = await Category.find({}).exec();
     res.status(200).json(categories);
   } catch (err) {
     res.status(400).json(err);
   }
-}
+};
+
 export const createCategory = async (req, res) => {
   const category = new Category(req.body);
   try {
@@ -16,4 +17,5 @@ export const createCategory = async (req, res) => {
   } catch (err) {
     res.status(400).json(err);
   }
-  };
+};
+

@@ -1,11 +1,35 @@
-import { User } from "../model/User.model .js";
+import { User } from "../model/User.model.js";
+import crypto from 'crypto'
+import { sanitizeUser } from "../utils/common.utils.js"; 
 
 export const createUser = async (req, res) => {
-  const user = new User(req.body);
-
-  try {
-    const doc = await user.save();
-    res.status(201).json({id:doc.id , role: doc.role});
+  try { 
+    const salt = crypto.randomBytes(16);
+    crypto.pbkdf2(
+      req.body.password,
+      salt,
+      310000,
+      32,
+      'sha256',
+      async function (err, hashedPassword) {
+        const user = new User({ ...req.body, password: hashedPassword, salt });
+        const doc = await user.save();
+        req.login(sanitizeUser(doc), (err) => {
+          // this also calls serializer and adds to session
+          if (err) {
+            res.status(400).json(err);
+          } else {
+            const token = jwt.sign(sanitizeUser(doc),process.env.JWT_SECRET_KEY);
+            res
+              .cookie('jwt', token, {
+                expires: new Date(Date.now() + 3600000),
+                httpOnly: true,
+              })
+              .status(201)
+              .json(token);
+          }
+        });
+      })
   } catch (error) {
     console.error("Error creating User:", error);
     res.status(400).json({ error: error });
@@ -13,18 +37,15 @@ export const createUser = async (req, res) => {
 };
 
 export const logInUser = async (req, res) => {
-  try { 
-   
-    const { email, password } = req.body;  
-    const user = await User.findOne({ email:req.body.email }).exec(); 
-    console.log(`User ${user}`)
-    if(!user){
-        res.status(401).json({Error : "Invalid Credintials , Please Check"})
-    }
-    else if (req.body.password === user.password) {
-      res.status(201).json({id : user.id  , role:user.role});
-    }
-  } catch (error) {
-    res.status(401).json({ Error: "Invalid ! Credintials" });
-  }
+  res
+    .cookie('jwt', req.user.token, {
+      expires: new Date(Date.now() + 3600000),
+      httpOnly: true,
+    })
+    .status(201)
+    .json(req.user.token);
+};
+
+export const checkUser = async (req, res) => {
+  res.json({ status: 'success', user: req.user });
 };
