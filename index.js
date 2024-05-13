@@ -181,7 +181,11 @@ passport.deserializeUser(function (user, cb) {
 const stripe = require('stripe')(process.env.STRIPE_SERVER_KEY);
 
 server.post('/create-payment-intent', async (req, res) => {
-  const { totalAmount, orderId } = req.body;
+  const { totalAmount, orderId } = req.body; 
+  console.log('t:' , totalAmount)
+  if (!totalAmount || isNaN(totalAmount)) {
+    totalAmount = 100; // Default value in currency unit (e.g., 100 cents)
+  }
 
   // Create a PaymentIntent with the order amount and currency
   const paymentIntent = await stripe.paymentIntents.create({
